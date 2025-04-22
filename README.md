@@ -1,38 +1,41 @@
-# sv
+# Reading Diary
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Aplikace pro sledování přečtených knih.
 
-## Creating a project
+## Spuštění aplikace
 
-If you're seeing this, you've probably already done this step. Congrats!
+Nejjednodušší způsob spuštění aplikace je pomocí souboru `start.bat`:
 
 ```bash
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+# Stačí spustit soubor start.bat
+start.bat
 ```
 
-## Developing
+Tento dávkový soubor spustí aplikaci pomocí Node.js a počká na ukončení.
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## Vývoj
+
+Pro vývoj můžete použít následující příkazy:
 
 ```bash
+# Instalace závislostí
+npm install
+# nebo
+pnpm install
+
+# Spuštění vývojového serveru
 npm run dev
 
-# or start the server and open the app in a new browser tab
+# Spuštění vývojového serveru a otevření v prohlížeči
 npm run dev -- --open
 ```
 
-## Building
+## Sestavení pro produkci
 
-To create a production version of your app:
+Pro vytvoření produkční verze aplikace:
 
 ```bash
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Pro náhled produkční verze můžete použít `npm run preview`.
