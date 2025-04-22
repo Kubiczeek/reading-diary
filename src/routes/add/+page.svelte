@@ -5,6 +5,7 @@
   // Book data
   let title = "";
   let author = "";
+  let note = ""; // Added note field
   let submitting = false;
   let error = null;
   let success = false;
@@ -29,6 +30,7 @@
         body: JSON.stringify({
           title,
           author: author || undefined, // Only send author if it's not empty
+          note: note || undefined, // Only send note if it's not empty
         }),
       });
 
@@ -36,6 +38,7 @@
       success = true;
       title = "";
       author = "";
+      note = "";
 
       // Navigate back to the home page after a short delay
       setTimeout(() => {
@@ -92,6 +95,17 @@
       />
     </div>
 
+    <div class="form-group">
+      <label for="note">Poznámka</label>
+      <textarea
+        id="note"
+        bind:value={note}
+        placeholder="Zadejte poznámku nebo komentář ke knize (nepovinné)"
+        rows="5"
+        disabled={submitting}
+      ></textarea>
+    </div>
+
     <div class="form-actions">
       <button type="submit" class="submit-button" disabled={submitting}>
         {#if submitting}
@@ -127,16 +141,24 @@
     font-weight: 500;
   }
 
-  input {
+  input,
+  textarea {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 1rem;
     transition: border-color 0.2s;
+    font-family: inherit;
   }
 
-  input:focus {
+  textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+
+  input:focus,
+  textarea:focus {
     outline: none;
     border-color: #4a69bd;
   }

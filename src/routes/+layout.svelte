@@ -30,7 +30,12 @@
 
   // Save the backend URL to a cookie whenever it changes
   function saveBackendUrl() {
-    setCookie("backendUrl", backendUrl, 30); // Save for 30 days
+    // Remove trailing slash if present
+    let urlToSave = backendUrl;
+    if (urlToSave.endsWith("/")) {
+      urlToSave = urlToSave.slice(0, -1);
+    }
+    setCookie("backendUrl", urlToSave, 30); // Save for 30 days
   }
 </script>
 
