@@ -83,3 +83,8 @@ export async function deleteBook(id) {
     method: "DELETE",
   });
 }
+
+export async function searchBooks(query) {
+  const encodedQuery = encodeURIComponent(query);
+  return fetchFromBackend(`/api/books/search?q=${encodedQuery}`);
+}

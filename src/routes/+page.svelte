@@ -1,6 +1,11 @@
 <script>
   import { onMount } from "svelte";
-  import { fetchFromBackend, updateBook, deleteBook } from "$lib/api";
+  import {
+    fetchFromBackend,
+    updateBook,
+    deleteBook,
+    searchBooks,
+  } from "$lib/api";
 
   // State for the list of books
   let books = [];
@@ -19,6 +24,13 @@
   // State for delete confirmation
   let confirmingDelete = null;
   let isDeleting = false;
+
+  // State for search
+  let searchQuery = "";
+  let searchResults = [];
+  let isSearching = false;
+  let searchError = null;
+  let isInSearchMode = false;
 
   // Function to fetch books from the API
   async function loadBooks() {
@@ -77,6 +89,17 @@
           note: editNote,
         };
         books = [...books]; // Trigger reactivity
+
+        // Also update search results if in search mode
+        if (isInSearchMode) {
+          const searchIndex = searchResults.findIndex(
+            (book) => book.id === editingBook.id
+          );
+          if (searchIndex !== -1) {
+            searchResults[searchIndex] = { ...books[index] };
+            searchResults = [...searchResults];
+          }
+        }
       }
 
       closeEditForm();
@@ -103,12 +126,49 @@
       isDeleting = true;
       await deleteBook(id);
       books = books.filter((book) => book.id !== id);
+      // Also update search results if in search mode
+      if (isInSearchMode) {
+        searchResults = searchResults.filter((book) => book.id !== id);
+      }
       confirmingDelete = null;
     } catch (err) {
       error = err.message;
     } finally {
       isDeleting = false;
     }
+  }
+
+  // Function to handle search
+  async function handleSearch() {
+    if (!searchQuery.trim()) {
+      clearSearch();
+      return;
+    }
+
+    try {
+      isSearching = true;
+      searchError = null;
+      searchResults = await searchBooks(searchQuery.trim());
+      isInSearchMode = true;
+    } catch (err) {
+      searchError = err.message;
+      searchResults = [];
+    } finally {
+      isSearching = false;
+    }
+  }
+
+  // Function to clear search
+  function clearSearch() {
+    searchQuery = "";
+    searchResults = [];
+    isInSearchMode = false;
+    searchError = null;
+  }
+
+  // Function to get the current book list (either all books or search results)
+  function getCurrentBooks() {
+    return isInSearchMode ? searchResults : books;
   }
 
   onMount(() => {
@@ -138,37 +198,107 @@
       <a href="/add" class="add-button">Přidat první knihu</a>
     </div>
   {:else}
-    <a href="/add" class="add-button">Přidat novou knihu</a>
-    <div class="books-list">
-      {#each books as book (book.id)}
-        <div class="book-card">
-          <h3>{book.title}</h3>
-          {#if book.author}
-            <p class="author">Autor: {book.author}</p>
-          {/if}
-          <div class="note">
-            {#if book.note}
-              <p class="note-content">{book.note}</p>
+    <!-- Search section -->
+    <div class="search-section">
+      <div class="search-container">
+        <input
+          type="text"
+          bind:value={searchQuery}
+          on:keydown={(e) => e.key === "Enter" && handleSearch()}
+          placeholder="Hledat v knihách (název, autor, poznámka)..."
+          class="search-input"
+          disabled={isSearching}
+        />
+        <div class="search-buttons">
+          <button
+            on:click={handleSearch}
+            class="search-button"
+            disabled={isSearching || !searchQuery.trim()}
+          >
+            {#if isSearching}
+              Hledání...
             {:else}
-              <p class="note-empty">Žádná poznámka</p>
+              Hledat
             {/if}
-          </div>
-          <div class="book-actions">
-            <button on:click={() => openEditForm(book)} class="edit-button">
-              Upravit
+          </button>
+          {#if isInSearchMode}
+            <button
+              on:click={clearSearch}
+              class="clear-search-button"
+              title="Zobrazit všechny knihy"
+            >
+              Zrušit
             </button>
-            <button on:click={() => confirmDelete(book)} class="delete-button">
-              Smazat
-            </button>
-          </div>
+          {/if}
         </div>
-      {/each}
+      </div>
+
+      {#if searchError}
+        <div class="search-error">
+          <p>Chyba při vyhledávání: {searchError}</p>
+        </div>
+      {/if}
+
+      {#if isInSearchMode}
+        <p class="search-results">
+          {#if searchResults.length === 0}
+            Žádné knihy neodpovídají vašemu vyhledávání "{searchQuery}"
+          {:else}
+            Nalezeno {searchResults.length}
+            {searchResults.length === 1
+              ? "kniha"
+              : searchResults.length < 5
+                ? "knihy"
+                : "knih"} pro "{searchQuery}"
+          {/if}
+        </p>
+      {/if}
     </div>
 
-    <!-- Add link to add page at the bottom as well -->
-    {#if books.length > 5}
-      <div class="bottom-add-link">
-        <a href="/add" class="add-button">Přidat novou knihu</a>
+    <a href="/add" class="add-button">Přidat novou knihu</a>
+
+    {#if getCurrentBooks().length > 0}
+      <div class="books-list">
+        {#each getCurrentBooks() as book (book.id)}
+          <div class="book-card">
+            <h3>{book.title}</h3>
+            {#if book.author}
+              <p class="author">Autor: {book.author}</p>
+            {/if}
+            <div class="note">
+              {#if book.note}
+                <p class="note-content">{book.note}</p>
+              {:else}
+                <p class="note-empty">Žádná poznámka</p>
+              {/if}
+            </div>
+            <div class="book-actions">
+              <button on:click={() => openEditForm(book)} class="edit-button">
+                Upravit
+              </button>
+              <button
+                on:click={() => confirmDelete(book)}
+                class="delete-button"
+              >
+                Smazat
+              </button>
+            </div>
+          </div>
+        {/each}
+      </div>
+
+      <!-- Add link to add page at the bottom as well -->
+      {#if getCurrentBooks().length > 5}
+        <div class="bottom-add-link">
+          <a href="/add" class="add-button">Přidat novou knihu</a>
+        </div>
+      {/if}
+    {:else if isInSearchMode}
+      <div class="no-results">
+        <p>Žádné knihy neodpovídají vašemu vyhledávání.</p>
+        <button on:click={clearSearch} class="clear-search-link">
+          Zobrazit všechny knihy
+        </button>
       </div>
     {/if}
   {/if}
@@ -334,6 +464,113 @@
   .bottom-add-link {
     text-align: center;
     margin: 2rem 0 1rem;
+  }
+
+  /* Search styles */
+  .search-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .search-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .search-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: #4a69bd;
+    box-shadow: 0 0 0 2px rgba(74, 105, 189, 0.2);
+  }
+
+  .search-input:disabled {
+    background-color: #f5f5f5;
+    opacity: 0.7;
+  }
+
+  .search-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .search-button {
+    background-color: #4a69bd;
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .search-button:hover:not(:disabled) {
+    background-color: #3a559d;
+  }
+
+  .search-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .clear-search-button {
+    background-color: #f5f5f5;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .clear-search-button:hover {
+    background-color: #e5e5e5;
+  }
+
+  .search-error {
+    background-color: #ffebee;
+    color: #d32f2f;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .search-results {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+    font-style: italic;
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 2rem;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    margin: 1rem 0;
+  }
+
+  .clear-search-link {
+    background: none;
+    border: none;
+    color: #4a69bd;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.9rem;
+  }
+
+  .clear-search-link:hover {
+    color: #3a559d;
   }
 
   .books-list {
